@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html ng-app="360POS">
+
+<head>
+    <title>360 - POS</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/nanoscroller.css" rel="stylesheet" />
+    <link href="css/pos.css" rel="stylesheet" /> </head>
+
+<body style="padding-top: 15px;" ng-controller="POSController">
+    <div id="ultimoDepositoCaja" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <p>El valor del último depósito es de <b>{{valorUltimoDeposito| currency:undefined:0}}</b>.</p>
+                        <p>Por favor retira ese monto de la caja y confirma que queden <b>$400.000</b> de base para el siguiente turno presionando el botón Cerrar.</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <button class="btn btn-lg btn-danger noround" type="button" ng-click="realizarUltimoDeposito()">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="confirmarAnulacion" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="modal-body">
+                    <div class="row" ng-if="!ejecutandoAnulacion">
+                        <div class="col-xs-12">
+                            <p>¿Estás seguro que quieres anular la transacción #{{pagoTarjetaAnular.voucher}} por valor de {{pagoTarjetaAnular.valor| currency:undefined:0}}?</p>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="ejecutandoAnulacion">
+                        <div class="col-xs-12">
+                            <p>Oprime la tecla <span class="glyphicon glyphicon-triangle-bottom"></span> en el datáfono y selecciona la opción <b>Anulación</b>, luego, presiona la tecla verde</p>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="ejecutandoAnulacion">
+                        <div class="col-xs-12" style="margin-left: auto; margin-right: auto; text-align: center;"> <img src="img/30.gif" /> </div>
+                    </div>
+                </div>
+                <div class="modal-footer" ng-if="!ejecutandoAnulacion">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="width: 100%; text-align: right;">
+                                        <button class="btn btn-lg btn-danger noround" type="button" ng-click="anularPagoTarjeta()"> Sí </button>
+                                        <button class="btn btn-lg noround" type="button" data-dismiss="modal"> No </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="datafono" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-xs-12" ng-if="codigoRespuestaDatafono === null">
+                            <p>Presiona la tecla verde del datáfono para iniciar la transacción...</p>
+                        </div>
+                        <div class="col-xs-12" style="margin-left: auto; margin-right: auto; text-align: center;" ng-if="codigoRespuestaDatafono === null">
+                            <img src="img/30.gif" />
+                        </div>
+                        <div class="col-xs-12" ng-if="codigoRespuestaDatafono !== null">
+                            <p>{{mensajeRespuestaDatafono}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" ng-if="codigoRespuestaDatafono !== null">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="width: 100%; text-align: right;">
+                                        <button class="btn btn-lg btn-danger noround" type="button" data-dismiss="modal"> Cerrar </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="devoluciones" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="row" ng-show="errorMontoAperturaCaja !== null">
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="aperturaCierreCaja" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="row" ng-show="errorMontoAperturaCaja !== null">
+                    <div class="col-xs-12">
+                        <div class="alert alert-danger">
+                            <p>{{errorMontoAperturaCaja}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-show="errorMontoCierreCaja !== null">
+                    <div class="col-xs-12">
+                        <div class="alert alert-danger">
+                            <p>{{errorMontoCierreCaja}} {{saldoActualCaja| currency:undefined:0}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <h1 ng-show="!cajaAbierta" style="padding-left: 15px;">Apertura de caja</h1>
+                    <h3 ng-show="cajaAbierta" style="padding-left: 15px;">Cierre de caja</h3>
+                    <div class="col-xs-8">
+                        <div class="row">
+                            <div class="col-xs-4" ng-repeat="denominacion in denominaciones">
+                                <div class="denominacion" ng-click="seleccionarDenominacion(denominacion)" ng-class="{'denominacion-selected' : denominacionSeleccionada.valor === denominacion.valor && denominacionSeleccionada.tipo === denominacion.tipo}">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td style="text-align: center;" colspan="2"> <img class="img-denominacion" alt="" ng-src="{{denominacion.urlImagen}}" /> </td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="2" style="text-align: right; font-size: 30px;"> {{denominacion.cantidad * denominacion.valor| currency:undefined:0}} </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-4">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td colspan="3">
+                                    <form>
+                                        <input id="cantidadDenominacion" class="form-control input-lg noround input-unidades" ng-model="cantidadDenominacionSeleccionada" placeholder="Seleccione denominación" style="text-align: right; height: 70px; font-size: 40px;" readonly/> </form>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-right: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(7)">7</button>
+                                </td>
+                                <td>
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(8)">8</button>
+                                </td>
+                                <td style="padding-left: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(9)">9</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-right: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(4)">4</button>
+                                </td>
+                                <td>
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(5)">5</button>
+                                </td>
+                                <td style="padding-left: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(6)">6</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding-right: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(1)">1</button>
+                                </td>
+                                <td>
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(2)">2</button>
+                                </td>
+                                <td style="padding-left: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(3)">3</button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">
+                                    <button class="btn btn-calc noround" type="button" ng-click="agregarCantidad(0)">0</button>
+                                </td>
+                                <td style="padding-left: 5px;">
+                                    <button class="btn btn-calc noround" type="button" ng-click="limpiarCantidad()">C</button>
+                                </td>
+                            </tr>
+                            <tr ng-show="totalApertura > 0">
+                                <td colspan="3" style="text-align: right;">
+                                    <h1>Total</h1>
+                                </td>
+                            </tr>
+                            <tr ng-show="totalApertura > 0">
+                                <td colspan="3" style="text-align: right; font-size: 35px;"> {{totalApertura| number:0}} </td>
+                            </tr>
+                            <tr ng-show="totalApertura > 0">
+                                <td colspan="3">
+                                    <button class="btn btn-lg btn-danger noround" style="width: 100%" ng-click="ejecutarAperturaCaja()" ng-show="!cajaAbierta">Abrir</button>
+                                    <button class="btn btn-lg btn-danger noround" style="width: 100%" ng-click="validarMontoCierre()" ng-show="cajaAbierta">Validar</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="autorizacion" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm noround">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="row">
+                    <form autocomplete="off">
+                        <div class="col-xs-12 col-sm-6">
+                            <div class="form-group">
+                                <label for="txtUsuario">usuario</label>
+                                <input id="txtUsuario" type="text" ng-model="autUsuario" placeholder="usuario" class="form-control input-lg noround" autocomplete="off" />
+                            </div>
+                        </div>
+                        <div class="col-xs-12 col-sm-6">
+                            <div class="form-group">
+                                <label for="txtPsswd">contraseña</label>
+                                <input id="txtPsswd" type="password" ng-model="autPsswd" class="form-control input-lg noround" placeholder="Contraseña" autocomplete="off" />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="row" ng-show="autMsgError !== null">
+                    <div class="col-xs-12">
+                        <div class="alert alert-danger" role="alert">
+                            <p>{{autMsgError}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <table style="width: 100%">
+                            <tr>
+                                <td style="text-align: left;">
+                                    <button type="button" class="btn btn-lg btn-default noround" ng-click="ocultarPanelAut()">Cerrar</button>
+                                </td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="btn btn-lg btn-danger noround" ng-click="validarAutorizacion()">Autorizar</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="ubicaciones" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg noround">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="modal-header">
+                    <div class="modal-title text-center">
+                        <h3 style="margin-top:0px;">Indique desde donde se facturarán los productos</h3>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-xs-6 text-center">
+                            <div class="row">
+                                <div class="col-xs-8 col-xs-offset-2">
+                                    <img ng-src="{{'http://www.matisses.co/modules/wsmatisses/files/' + productoUbicaciones.itemCode + '/images/' + productoUbicaciones.itemCode + '_01.jpg'}}" class="img-responsive" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <span class="referencia">{{productoUbicaciones.itemCode| limitTo : 3 : 0}}.{{productoUbicaciones.itemCode| limitTo : 4 : 16}}</span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <span class="ref-proveedor">{{productoUbicaciones.providerCode}}</span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-12">
+                                    <span class="nombre-producto">{{productoUbicaciones.itemName}}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-6">
+                            <div class="row">
+                                <div class="col-xs-7 text-right">
+                                    <span class="cant-necesaria">Cant. necesaria: </span>
+                                </div>
+                                <div class="col-xs-5 text-left">
+                                    <span class="cant-necesaria">{{productos[productoSeleccionado].cantidad}}</span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-7 text-right">
+                                    <span class="cant-elegida">Cant. elegida: </span>
+                                </div>
+                                <div class="col-xs-5 text-left">
+                                    <span class="cant-elegida">{{ubicacionesProductos[productoSeleccionado].exhibicion.seleccionado + ubicacionesProductos[productoSeleccionado].bodega.seleccionado}}</span>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-10 col-xs-offset-1">
+                                    <div class="ubicacion-producto">
+                                        <div class="row">
+                                            <div class="col-xs-9">
+                                                <div class="row">
+                                                    <div class="col-xs-12 text-center">
+                                                        <span class="tipo-almacen">Bodega</span>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-12 text-center">
+                                                        <p> <span class="seleccionado">{{ubicacionesProductos[productoSeleccionado].bodega.seleccionado}}/</span> <span class="disponible">{{ubicacionesProductos[productoSeleccionado].bodega.disponible}}</span> </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-xs-3 text-right">
+                                                <div class="row">
+                                                    <div class="col-xs-12">
+                                                        <span class="glyphicon glyphicon-plus agregar" ng-click="agregarCantidadUbicacion('b')"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-12">
+                                                        <span class="glyphicon glyphicon-minus quitar" ng-click="quitarCantidadUbicacion('b')"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-10 col-xs-offset-1">
+                                    <div class="ubicacion-producto">
+                                        <div class="row">
+                                            <div class="col-xs-9">
+                                                <div class="row">
+                                                    <div class="col-xs-12 text-center">
+                                                        <span class="tipo-almacen">Exhibición</span>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-12 text-center">
+                                                        <p> <span class="seleccionado">{{ubicacionesProductos[productoSeleccionado].exhibicion.seleccionado}}/</span> <span class="disponible">{{ubicacionesProductos[productoSeleccionado].exhibicion.disponible}}</span> </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-xs-3 text-right">
+                                                <div class="row">
+                                                    <div class="col-xs-12">
+                                                        <span class="glyphicon glyphicon-plus agregar" ng-click="agregarCantidadUbicacion('e')"></span>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-xs-12">
+                                                        <span class="glyphicon glyphicon-minus quitar" ng-click="quitarCantidadUbicacion('e')"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- opción de regalo
+                    <div class="row">
+                    <div class="col-xs-12">
+                        <div class="panel-group">
+                            <div class="panel panel-default">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">
+                                        <a data-toggle="collapse" href="#panelRegalos">
+                                                Información para regalo
+                                                <span class="glyphicon glyphicon-collapse-down pull-right" style="margin-top: -5px;font-size: 25px;"></span>
+                                            </a>
+                                    </h3>
+                                </div>
+                                <div id="panelRegalos" class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                        <div class="row">
+                                            <div class="col-xs-12">
+                                                <table style="width: 100%;">
+                                                    <tr>
+                                                        <td colspan="3" style="text-align: left;">
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="text-align: left; font-size: 16px;">Nombre regalo: </td>
+                                                        <td>
+                                                            <input id="txtNombreRegalo" placeholder="Nombre regalo" type="text" ng-model="nombreRegalo" class="form-control input-lg noround" />
+                                                        </td>
+                                                        <td style="text-align: right;">
+                                                            <button class="btn btn-lg btn-default noround" type="button" ng-click="crearRegalo()">Crear</button>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-xs-12">
+                                                <table style="width: 100%;">
+                                                    <tr>
+                                                        <td style="text-align: left;">
+                                                            <div class="dropdown" style="margin-top: 8px;">
+                                                                <button class="btn btn-default btn-lg dropdown-toggle noround" type="button" id="dropRegalo" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="width: 100%; text-align: left; top: -4px; position: relative; height: 46px;">
+                                                                        <h4 style="margin-top: 0px; margin-bottom: 0px;" >
+                                                                            {{obtenerTextoRegaloSeleccionado()}}
+                                                                        </h4> 
+                                                                        <span class="caret pull-right" style="margin-top: -15px;"></span> 
+                                                                    </button>
+                                                                <ul class="dropdown-menu dropdown-menu-scroll" aria-labelledby="dropRegalo">
+                                                                    <li ng-repeat="regalo in regalos| orderBy:'giftName'">
+                                                                        <a href="#" ng-click="seleccionarRegalo(regalo)" style="padding-top: 5px; padding-bottom: 5px;">
+                                                                                {{regalo.giftName}} <span class="badge">{{obtenerCantidadItemRegalo(regalo.giftName, productoUbicaciones.itemCode)}}</span>
+                                                                            </a>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </td>
+                                                        <td style="text-align: right; font-size: 16px; padding-right: 5px;">Cantidad</td>
+                                                        <td style="text-align: left;">
+                                                            <input id="txtCantidadRegalo" type="text" ng-model="cantidadRegalo" class="form-control input-lg noround" style="width: 65px;" />
+                                                        </td>
+                                                        <td style="text-align: right;">
+                                                            <button class="btn btn-lg btn-default noround" type="button" ng-click="agregarArticuloRegalo()">Guardar</button>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        <div class="row" ng-show="mensajeErrorRegalo !== null">
+                                            <div class="col-xs-12">
+                                                <div class="alert alert-danger mensaje-regalo" role="alert">
+                                                    <p>{{mensajeErrorRegalo}}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row" ng-show="mensajeConfirmacionRegalo !== null">
+                                            <div class="col-xs-12">
+                                                <div class="alert alert-success mensaje-regalo" role="alert">
+                                                    <p>{{mensajeConfirmacionRegalo}}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div> -->
+                </div>
+                <div class="modal-footer">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="width: 25%; text-align: left;">
+                                        <button class="btn btn-lg btn-danger noround" type="button" ng-click="mostrarProductoAnterior()"> Anterior </button>
+                                    </td>
+                                    <td style="width: 50%; text-align: center; font-size: 16px;">
+                                        <p>Producto {{productoSeleccionado + 1}} de {{productos.length}}</p>
+                                    </td>
+                                    <td style="width: 25%; text-align: right;">
+                                        <button class="btn btn-lg btn-danger noround" type="button" ng-show="productoSeleccionado < productos.length - 1" ng-disabled="validarProductoSeleccionado()" ng-click="mostrarSiguienteProducto()"> Siguiente </button>
+                                        <button class="btn btn-lg btn-danger noround" type="button" ng-show="productoSeleccionado === productos.length - 1" ng-disabled="validarProductoSeleccionado()" ng-click="finalizarSeleccionProductos()"> Terminar </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="confirmacionPago" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg noround">
+            <div class="modal-content" style="padding: 15px;">
+                <div class="row">
+                    <h2 style="text-align: center;">Asesores (máx. 5)</h2>
+                    <div class="col-xs-6">
+                        <div class="row" ng-show="sucursalesVenta.length === 0">
+                            <div class="col-xs-12">
+                                No se encontraron asesores de venta
+                            </div>
+                        </div>
+                        <div class="row" ng-show="sucursalesVenta.length > 0">
+                            <ul class="nav nav-tabs">
+                                <li ng-repeat="sucursal in sucursalesVenta" ng-class="{'active' : $first}" ng-click="seleccionarSucursal(sucursal)">
+                                    <a data-toggle="tab" ng-href="#{{sucursal.code}}">{{sucursal.name}}</a>
+                                </li>
+                            </ul>
+                            <div class="tab-content">
+                                <div id="empleados" class="tab-pane fade in active empleado-ventas">
+                                    <div class="col-xs-4" ng-repeat="empleado in empleadosVentas">
+                                        <div class="asesor-venta" ng-click="seleccionarEmpleado(empleado)" ng-class="{'asesor-venta-selected' : (obtenerPosicionEmpleado(empleado) >= 0)}">
+                                            <table style="width: 100%; text-align: center">
+                                                <tr>
+                                                    <td><img ng-src="http://tressesenta.matisses.co:8080/shared/empleados/{{empleado.cedula}}.jpg" /></td>
+                                                </tr>
+                                                <tr>
+                                                    <td>{{empleado.nombre}}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xs-6">
+                        <div class="row">
+                            <div class="row">
+                                <div class="col-xs-11" style="text-align: center;">
+                                    <h3 style="text-align: center;">Confirmar venta</h3>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11">
+                                    <div class="dropdown" style="margin-top: 8px;">
+                                        <button class="btn btn-default btn-lg dropdown-toggle noround" type="button" id="dropEstadoEntrega" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="width: 100%; text-align: left;">
+                                                <h3 style="margin-top: 0px; margin-bottom: 0px;">{{estadoPedidoSeleccionado}}</h3> <span class="caret pull-right" style="margin-top: -15px;"></span> </button>
+                                        <ul class="dropdown-menu dropdown-menu-scroll" aria-labelledby="dropEstadoEntrega">
+                                            <li> <a href="#" ng-click="seleccionarEstadoPedido('D')" style="padding-top: 5px; padding-bottom: 5px;">entrega inmediada</a> </li>
+                                            <li> <a href="#" ng-click="seleccionarEstadoPedido('P')" style="padding-top: 5px; padding-bottom: 5px;">programar entrega</a> </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11 col-sm-7"> <span class="confirmacion-venta">Artículos:</span> </div>
+                                <div class="col-xs-11 col-sm-4" style="text-align: right;"> <span class="confirmacion-venta">{{calcularTotalProductos()}}</span> </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11 col-sm-7"> <span class="confirmacion-venta">Total:</span> </div>
+                                <div class="col-xs-11 col-sm-4" style="text-align: right;"> <span class="confirmacion-venta">{{totalCompra| currency:undefined:0}}</span> </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11 col-sm-7"> <span class="confirmacion-venta">Pagos:</span> </div>
+                                <div class="col-xs-11 col-sm-4" style="text-align: right;"> <span class="confirmacion-venta" ng-repeat="medioPago in mediosPago" ng-hide="medioPago.valor === 0">
+                                            ({{medioPago.nombre}}) {{medioPago.valor| currency:undefined:0}}<br/>
+                                        </span> </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11 col-sm-7"> <span class="confirmacion-venta">Cambio</span> </div>
+                                <div class="col-xs-11 col-sm-4" style="text-align: right;"> <span class="confirmacion-venta">{{cambio|currency:undefined:0}}</span> </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-xs-11">
+                                    <textarea class="form-control input-lg noround" ng-model="comentariosFactura" placeholder="comentarios..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="alert alert-warning" role="alert" ng-show="empleadoRetirado !== null">
+                            <p>Se ha retirado a {{empleadoRetirado.nombre}} ya que en una factura pueden seleccionarse máximo 5 asesores</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="alert alert-danger" role="alert" ng-show="totalCompra + cambio < totalPagado">
+                            <p>El valor pagado es superior al valor total de la compra y los medios de pago utilizados no permiten entregar cambio. <b>¿Está seguro que desea continuar?</b></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row" ng-show="nfCodigoError === '-1'">
+                    <div class="col-xs-12">
+                        <div class="alert alert-danger" role="alert" style="margin-left: 15px; margin-right: 15px;">
+                            <p>{{nfMensajeError}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <table style="width: 100%">
+                            <tr>
+                                <td style="text-align: left;">
+                                    <button type="button" class="btn btn-lg btn-default noround" data-dismiss="modal">Cancelar</button>
+                                </td>
+                                <td style="text-align: right;">
+                                    <button type="button" class="btn btn-lg btn-danger noround" ng-click="generarFactura()" ng-show="nfCodigoError === '0'">Confirmar</button>
+                                    <button type="button" class="btn btn-lg btn-danger noround" ng-click="cerrarConfirmacionFacturaFallida()" ng-show="nfCodigoError === '-1'">Cerrar</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="saldoFavorCliente" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <form role="form">
+                    <h4>Saldo a favor para el cliente</h4>
+                    <div class="row">
+                        <div class="col-xs-12 col-md-6">
+                            <div class="form-group">
+                                <label for="txtSaldoCliente">Saldo disponible</label>
+                                <input id="txtSaldoCliente" type="number" ng-model="saldoFavorCliente" class="form-control input-lg noround" readonly="readonly" /> </div>
+                        </div>
+                        <div class="col-xs-12 col-md-6">
+                            <div class="form-group">
+                                <label for="txtSaldoClienteUtilizado">Saldo a utilizar</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-lg noround" type="button" ng-click="cargarPagoPendienteSaldo()">
+                                            <span class="glyphicon glyphicon-magnet"></span>
+                                    </button>
+                                    </span>
+                                    <input id="txtSaldoClienteUtilizado" type="number" ng-model="saldoFavorClienteUtilizado" class="form-control input-lg noround" ng-keyup="guardarValorCruce()" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" ng-show="saldoFavorClienteExcedido">
+                        <div class="alert alert-danger" role="alert" style="margin-left: 15px; margin-right: 15px;">
+                            <p> El monto ingresado no es válido. Por favor valide que el monto a usar del saldo a favor del cliente <b>no supere el valor de la venta, ya que no es posible dar cambio con este tipo de pago</b>; o que el valor <b>no supere el saldo total disponible</b> </p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="text-align: left; padding-left: 15px;">
+                                        <button type="button" class="btn btn-default btn-lg noround" data-dismiss="modal">Cerrar</button>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 15px;">
+                                        <button type="button" class="btn btn-danger btn-lg noround pull-right" ng-click="agregarPagoCruce()">Guardar</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="tarjetaRegalo" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <form role="form">
+                    <div class="row">
+                        <div class="col-xs-12" style="text-align: center; padding-bottom: 20px;">
+                            <img ng-src="img/giftcard.jpg" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-offset-2 col-xs-6">
+                            <div class="form-group">
+                                <label for="txtValorBono">ingresa el valor del bono</label>
+                                <input id="txtValorBono" type="number" ng-model="valorBono" class="form-control input-lg noround" />
+                            </div>
+                        </div>
+                        <div class="col-xs-2">
+                            <div class="form-group">
+                                <label for="txtCantidadBonos"># bonos</label>
+                                <input id="txtCantidadBonos" type="number" ng-model="cantidadBonos" class="form-control input-lg noround" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" ng-show="errorTarjetaRegalo">
+                        <div class="alert alert-danger" role="alert" style="margin-left: 15px; margin-right: 15px;">
+                            <p>No se puede continuar con la información ingresada. Por favor valida lo siguiente:</p>
+                            <ul>
+                                <li>No tienes <b>otros productos</b> agregados en el carrito</li>
+                                <li><b>El valor</b> del bono es un número mayor a cero</li>
+                                <li><b>La cantidad</b> de bonos es un número mayor a cero</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="text-align: left; padding-left: 15px;">
+                                        <button type="button" class="btn btn-default btn-lg noround" data-dismiss="modal">Cancelar</button>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 15px;">
+                                        <button type="button" class="btn btn-danger btn-lg noround pull-right" ng-click="agregarTarjetaRegalo()">Aceptar</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="pagoTarjeta" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="padding: 15px;">
+                <form role="form">
+                    <h4>Selecciona la franquicia de la tarjeta</h4>
+                    <div class="row">
+                        <div class="col-xs-12 col-sm-6 col-md-4 col-lg-3" ng-repeat="tipoTarjeta in tiposTarjeta">
+                            <div class="credit-card" ng-click="seleccionarFranquicia(tipoTarjeta)" ng-class="{'credit-card-selected' : (franquiciaSeleccionada !== null && franquiciaSeleccionada.creditCardId === tipoTarjeta.creditCardId), 'credit-card-disabled' : edicionPagoTarjeta}"> <img ng-src="img/{{tipoTarjeta.franchiseName}}.png" class="credit-card-logo " /> </div>
+                        </div>
+                    </div>
+                    <hr/>
+                    <h4>Ingresa los datos del pago</h4>
+                    <div class="row">
+                        <div class="col-xs-12 col-md-4">
+                            <div class="form-group">
+                                <label for="txtDigitos">Últimos dígitos</label>
+                                <input id="txtDigitos" type="text" pattern="[0-9]*" ng-model="npDigitos" ng-disabled="franquiciaSeleccionada.type === 'debit'" class="form-control input-lg noround" />
+                            </div>
+                        </div>
+                        <div class="col-xs-12 col-md-4">
+                            <div class="form-group">
+                                <label for="txtVoucher"># de voucher</label>
+                                <input id="txtVoucher" type="number" ng-model="npVoucher" class="form-control input-lg noround" />
+                            </div>
+                        </div>
+                        <div class="col-xs-12 col-md-4">
+                            <div class="form-group">
+                                <label for="txtValor">Valor</label>
+                                <div class="input-group">
+                                    <span class="input-group-btn">
+                                        <button class="btn btn-default btn-lg noround" type="button" ng-click="cargarPagoPendiente()">
+                                            <span class="glyphicon glyphicon-magnet"></span>
+                                    </button>
+                                    </span>
+                                    <input id="txtValor" type="number" ng-model="npValor" ng-keyup="calcularPorcentajeImpuestos()" class="form-control input-lg noround" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6">
+                            <div class="alert alert-danger" role="alert" ng-show="npCodigoError === '-1'" style="margin-left: 15px; margin-right: 15px;">
+                                <p>{{npMensajeError}}</p>
+                            </div>
+                        </div>
+                        <div class="col-xs-6">
+                            <div class="alert alert-info" role="alert" ng-show="npValor > 0" style="margin-left: 15px; margin-right: 15px;">
+                                <p>Base IVA: <b>{{baseIVAParcial}}</b>. Valor IVA: <b>{{valorIVAParcial}}</b></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="text-align: left; padding-left: 15px;">
+                                        <button type="button" class="btn btn-danger btn-lg noround" ng-show="edicionPagoTarjeta" ng-click="eliminarPagoTarjeta()">Eliminar</button>
+                                        <button type="button" class="btn btn-default btn-lg noround" data-dismiss="modal">Cerrar</button>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 15px;">
+                                        <button type="button" class="btn btn-danger btn-lg noround pull-right" ng-click="guardarPagoTarjeta()">Guardar</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="servicioNoDisponible" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;"> <span style="font-size: 65px;color: #808080;">¡Ay Dios!</span> <span style="margin-left: 25px;font-size: 80px;color: #d9534f;">:|</span>
+                <p>La conexión con SAP <b>no esta disponible en este momento.</b> Espera mientras se restablece o vuelve a cargar la página para intentarlo manualmente.</p>
+            </div>
+        </div>
+    </div>
+    <div id="inventarioInsuficiente" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content" style="padding: 15px;">
+                <p>Está intentando agregar al carrito más productos de los que hay disponibles en inventario, o bien los productos no están habilitados para ser facturados desde <b>COMPLEMENTOS</b></p>
+                <button type="button" class="btn btn-lg btn-danger noround" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <div id="espera" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-body modal-espera">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-danger progress-bar-striped active" role="progressbar" aria-valuenow="100" style="width: 100%"> <span class="sr-only">100% Complete</span> </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="confirmacionFactura" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="padding: 15px;">
+                <h4>Se generó la factura número <b>{{resultadoFactura.numeroFactura}}</b></h4>
+                <hr/>
+                <p>Indique el empaque utilizado</p>
+                <div class="row">
+                    <ul class="nav nav-tabs">
+                        <li class="active"><a data-toggle="tab" href="#bolsas">Bolsas</a></li>
+                        <li><a data-toggle="tab" href="#cajas">Cajas</a></li>
+                        <li><a data-toggle="tab" href="#otros">Otros</a></li>
+                    </ul>
+                    <div class="tab-content">
+                        <div id="bolsas" class="tab-pane fade in active material-empaque">
+                            <div class="col-xs-12 col-sm-4 col-md-3 col-lg-2" style="text-align: center" ng-repeat="tipoEmpaque in tiposEmpaque" ng-show="validarTipoEmpaque(tipoEmpaque.providerCode, 'ME-BO-')">
+                                <div class="btn-empaque" ng-click="agregarEmpaque(tipoEmpaque.itemCode)">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td> <img ng-src="{{'img/' + tipoEmpaque.itemCode + '.jpg'}}" class="img-empaque" /> </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="text-align: center;"> {{tipoEmpaque.itemName}} </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="total-empaque">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td class="cantidad-empaque">x {{tipoEmpaque.quantity}}</td>
+                                            <td><span class="glyphicon glyphicon-trash eliminar-empaque" ng-click="eliminarEmpaque(tipoEmpaque.itemCode)"></span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="cajas" class="tab-pane fade material-empaque">
+                            <div class="col-xs-12 col-sm-4 col-md-3 col-lg-2" style="text-align: center" ng-repeat="tipoEmpaque in tiposEmpaque" ng-show="validarTipoEmpaque(tipoEmpaque.providerCode, 'ME-CA-')">
+                                <div class="btn-empaque" ng-click="agregarEmpaque(tipoEmpaque.itemCode)">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td> <img ng-src="{{'img/' + tipoEmpaque.itemCode + '.jpg'}}" class="img-empaque" /> </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="text-align: center;"> {{tipoEmpaque.itemName}} </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="total-empaque">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td class="cantidad-empaque">x {{tipoEmpaque.quantity}}</td>
+                                            <td><span class="glyphicon glyphicon-trash eliminar-empaque" ng-click="eliminarEmpaque(tipoEmpaque.itemCode)"></span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="otros" class="tab-pane fade material-empaque">
+                            <div class="col-xs-12 col-sm-4 col-md-3 col-lg-2" style="text-align: center" ng-repeat="tipoEmpaque in tiposEmpaque" ng-show="validarTipoEmpaque(tipoEmpaque.providerCode, 'ME-OT-')">
+                                <div class="btn-empaque" ng-click="agregarEmpaque(tipoEmpaque.itemCode)">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td> <img ng-src="{{'img/' + tipoEmpaque.itemCode + '.jpg'}}" class="img-empaque" /> </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="text-align: center;"> {{tipoEmpaque.itemName}} </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="total-empaque">
+                                    <table style="width: 100%">
+                                        <tr>
+                                            <td class="cantidad-empaque">x {{tipoEmpaque.quantity}}</td>
+                                            <td><span class="glyphicon glyphicon-trash eliminar-empaque" ng-click="eliminarEmpaque(tipoEmpaque.itemCode)"></span></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <button type="button" class="btn btn-lg btn-danger noround pull-right" ng-click="crearRegistroEmpaqueVenta()">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="listaFacturasAnulables" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <h3 style="color: #8f8f8f" ng-show="facturasAnulables.length === 0">No hay facturas aptas para ser anuladas</h3>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <table class="table table-bordered tabla-ventas" ng-show="facturasAnulables.length > 0">
+                            <thead>
+                                <tr>
+                                    <th style="text-align: right;"># FACTURA</th>
+                                    <th style="text-align: right;">NIT</th>
+                                    <th>CLIENTE</th>
+                                    <th style="text-align: right;">TOTAL</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="factura in facturasAnulables" ng-click="seleccionarFacturaAnular(factura)">
+                                    <td ng-class="{'factura-anular-seleccionada' : facturaAnularSeleccionada.numeroFactura === factura.numeroFactura}" style="text-align: right;"> {{factura.numeroFactura}} </td>
+                                    <td ng-class="{'factura-anular-seleccionada' : facturaAnularSeleccionada.numeroFactura === factura.numeroFactura}" style="text-align: right;"> {{factura.nit}} </td>
+                                    <td ng-class="{'factura-anular-seleccionada' : facturaAnularSeleccionada.numeroFactura === factura.numeroFactura}">
+                                        {{factura.nombreCliente}}
+                                    </td>
+                                    <td ng-class="{'factura-anular-seleccionada' : facturaAnularSeleccionada.numeroFactura === factura.numeroFactura}" style="text-align: right;"> {{factura.totalVenta| number:0}} </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="row" ng-show="facturasAnulables.length > 0">
+                    <div class="col-xs-12">
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 50%;">
+                                    <button type="button" class="btn btn-default btn-lg noround" data-dismiss="modal">Cancelar</button>
+                                </td>
+                                <td style="width: 50%; text-align: right;">
+                                    <button type="button" class="btn btn-danger btn-lg noround" ng-show="facturaAnularSeleccionada !== null" ng-click="mostrarPanelAutorizacion('ANULAR', 'FACTURA_POS', '#listaFacturasAnulables', anularFacturaSeleccionada)">Anular</button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="ventasPendientes" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content" style="padding: 15px;">
+                <h3 style="color: #8f8f8f" ng-show="ventasPendientes.length === 0">No hay ventas pendientes</h3>
+                <table class="table table-bordered tabla-ventas" ng-show="ventasPendientes.length > 0">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Cliente</th>
+                            <th style="text-align: right;">Productos</th>
+                            <th style="text-align: right;">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr ng-repeat="venta in ventasPendientes" ng-click="cargarVentaPendiente(venta)">
+                            <td> {{venta.fecha| date:'HH:mm'}} </td>
+                            <td> {{venta.nit}} </td>
+                            <td style="text-align: right;"> {{venta.numeroProductos| number:0}} </td>
+                            <td style="text-align: right;"> {{venta.totalVenta| number:0}} </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div id="cancelarVenta" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content" style="padding: 15px;">
+                <p>¿Está seguro que desea cancelar la venta actual?</p>
+                <p ng-show="mediosPago[2].valor > 0"><b>Recuerde que debe anular las transacciones de datáfono realizadas</b></p>
+                <button type="button" class="btn btn-lg btn-danger noround" ng-click="cancelarVenta()">Sí, estoy seguro</button>
+                <button type="button" class="btn btn-lg btn-default noround" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <div id="borrarProducto" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content" style="padding: 15px;">
+                <p>¿Está seguro que desea eliminar una unidad del producto
+                    <b>{{productoEliminar.itemCode| limitTo : 3 : 0}}.{{productoEliminar.itemCode| limitTo : 4 : 16}}</b>?</p>
+
+                <!-- Split button -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-lg btn-danger noround" ng-click="borrarProductoCarrito(1)">Quitar uno</button>
+                    <button type="button" class="btn btn-lg btn-danger dropdown-toggle noround" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a href="#" ng-click="borrarProductoCarrito(productoEliminar.cantidad)">Quitar todos ({{productoEliminar.cantidad}})</a></li>
+                    </ul>
+                </div>
+
+                <!--<button type="button" class="btn btn-lg btn-danger noround" ng-click="borrarProductoCarrito()">Eliminar</button>-->
+                <button type="button" class="btn btn-lg btn-default noround" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+    <div id="nuevoCliente" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content" style="padding: 15px;">
+                <form role="form">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <div class="alert alert-danger" role="alert" ng-show="ncResultado === '-1'">
+                                <p>{{ncMensajeError}}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="text" ng-model="ncNombres" placeholder="Nombres" required/> </div>
+                        <!--<div class="col-xs-12 form-padding">
+                                <input class="form-control input-lg noround" type="text" ng-model="ncSegundoNombre" placeholder="Segundo Nombre" /> </div>-->
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="text" ng-model="ncPrimerApellido" placeholder="Primer Apellido" required="" /> </div>
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="text" ng-model="ncSegundoApellido" placeholder="Segundo Apellido" /> </div>
+                        <div class="col-xs-12 form-padding">
+                            <input id="dptoSel" type="hidden" ng-model="departamentoSeleccionado" required/>
+                            <div class="dropdown">
+                                <button class="btn btn-default btn-lg dropdown-toggle noround" type="button" id="dropDepartamento" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="width: 100%; text-align: left;"> {{departamentoSeleccionado ? departamentoSeleccionado.nombre : 'Departamento'}} <span class="caret pull-right" style="margin-top: 10px;"></span> </button>
+                                <ul class="dropdown-menu dropdown-menu-scroll" aria-labelledby="dropDepartamento">
+                                    <li ng-repeat="dpto in departamentos| orderBy:'nombre'"> <a href="#" ng-click="seleccionarDepartamento(dpto)" style="padding-top: 5px; padding-bottom: 5px;">
+                                                {{dpto.nombre}}
+                                            </a> </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-xs-12 form-padding">
+                            <div class="dropdown">
+                                <button class="btn btn-default btn-lg dropdown-toggle noround" type="button" id="dropCiudad" ng-class="{'disabled' : departamentoSeleccionado ? false : true}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" style="width: 100%; text-align: left;"> {{municipioSeleccionado ? municipioSeleccionado.nombre : 'Seleccione...'}} <span class="caret pull-right" style="margin-top: 10px;"></span> </button>
+                                <ul class="dropdown-menu dropdown-menu-scroll" aria-labelledby="dropCiudad">
+                                    <li ng-repeat="mpio in municipios| orderBy:'codigo'"> <a href="#" ng-click="seleccionarMunicipio(mpio)" style="padding-top: 5px; padding-bottom: 5px;">
+                                                {{mpio.nombre}}
+                                            </a> </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="text" ng-model="ncDireccion" placeholder="Dirección" required/> </div>
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="tel" ng-model="ncTelefono" placeholder="Teléfono" /> </div>
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="tel" ng-model="ncCelular" placeholder="Celular" /> </div>
+                        <div class="col-xs-12 form-padding">
+                            <input class="form-control input-lg noround" type="email" ng-model="ncCorreo" placeholder="Correo" required/> </div>
+                    </div>
+                    <hr style="margin-bottom: 10px; margin-top: 5px;" />
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <button type="button" class="btn btn-default btn-lg noround" data-dismiss="modal">Cerrar</button>
+                            <button type="button" class="btn btn-danger btn-lg noround" ng-click="guardarCliente()">Guardar</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        function loadActions() {
+            $(".nano").nanoScroller();
+        };
+        window.onload = loadActions;
+
+    </script>
+    <div class="container-fluid" ng-show="cajaAbierta && sesionValida && estadoValidacion === 1" ng-cloak>
+        <div class="row">
+            <div class="col-xs-8">
+                <div class="row">
+                    <div class="col-xs-12">
+                        <form ng-submit="buscarYAgregar()">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td style="padding-right: 10px;">
+                                        <input autofocus autocomplete="off" type="text" placeholder="escanear o buscar..." class="form-control input-lg noround" ng-model="textoBusqueda" id="txtBusqueda" ng-disabled="modoCarrito === 'bono'" /> </td>
+                                    <td style="width: 30px; padding-right: 10px;">
+                                        <button class="glyphicon glyphicon-th boton-modo-carrito" ng-click="cambiarModoVisualizacion('parrilla')" ng-show="modoTablaProductos === 'tabla'" type="button"> </button>
+                                        <button class="glyphicon glyphicon-list-alt boton-modo-carrito" ng-click="cambiarModoVisualizacion('tabla')" ng-show="modoTablaProductos === 'parrilla'" type="button"> </button>
+                                    </td>
+                                    <td style="width: 30px;">
+                                        <button class="glyphicon glyphicon-gift boton-tarjeta-regalo" ng-click="mostrarPanelTarjetaRegalo()" type="button" ng-disabled="modoCarrito === 'producto' || saldoTarjetaRegalo === 0"> </button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </form>
+                    </div>
+                </div>
+                <br/>
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div id="product-table-header" ng-show="modoTablaProductos === 'tabla'">
+                            <table class="table table-bordered table-hover" style="margin-bottom: 0px;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">Producto</th>
+                                        <th style="width: 80px;">Ref.</th>
+                                        <th>Descripción</th>
+                                        <th style="text-align: right; width: 55px;">Cant.</th>
+                                        <th style="text-align: right; width: 115px;">Precio</th>
+                                        <th style="text-align: right; width: 115px;">Subtotal</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                        <div class="nano">
+                            <div class="nano-content" ng-show="modoTablaProductos === 'parrilla'">
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-6" ng-repeat="producto in productos">
+                                        <div class="producto-carrito" ng-click="mostrarConfirmacionBorrado(producto)">
+                                            <table style="width: 100%; height: 100%;">
+                                                <tr>
+                                                    <td rowspan="2" style="width: 103px">
+                                                        <table style="width: 100%">
+                                                            <tr>
+                                                                <td> <img style="width: 103px" alt="" ng-src="{{'http://www.matisses.co/modules/wsmatisses/files/' + producto.itemCode + '/mini/' + producto.itemCode + '.jpg'}}" /> </td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="text-align: center; vertical-align: bottom; width: 45px;"><b>Total</b></td>
+                                                            </tr>
+                                                            <tr>
+                                                                <td style="text-align: center; vertical-align: bottom;"><b>{{producto.cantidad * producto.price| currency:undefined:0}}</b></td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                    <td> <b>Ref.</b> {{producto.itemCode| limitTo : 3 : 0}}.{{producto.itemCode| limitTo : 4 : 16}} </td>
+                                                    <td style="text-align: center;">Cant</td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="vertical-align: top;"> <span>{{producto.itemName}}</span>
+                                                        <p><small>{{producto.providerCode}}</small></p>
+                                                    </td>
+                                                    <td style="font-size: 40px; width: 60px; text-align: center; color: #666;"> {{producto.cantidad}} </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="nano-content" ng-show="modoTablaProductos === 'tabla'">
+                                <table class="table table-bordered table-hover" style="margin-bottom: 0px;">
+                                    <tbody>
+                                        <tr ng-repeat="producto in productos" ng-click="mostrarConfirmacionBorrado(producto)">
+                                            <td style="width: 120px;"> <img style="max-width: 100%" alt="" ng-src="{{'http://www.matisses.co/modules/wsmatisses/files/' + producto.itemCode + '/mini/' + producto.itemCode + '.jpg'}}" /> </td>
+                                            <td style="width: 80px;">{{producto.itemCode| limitTo : 3 : 0}}.{{producto.itemCode| limitTo : 4 : 16}}</td>
+                                            <td> <span>{{producto.itemName}}</span>
+                                                <p><small>{{producto.providerCode}}</small></p>
+                                            </td>
+                                            <td style="text-align: right; width: 55px;">{{producto.cantidad}}</td>
+                                            <td style="text-align: right; width: 115px;">
+                                                <p style="margin: 0 !important; {{producto.discountPercent > 0 ? 'text-decoration: line-through; color: #AAAAAA' : ''}}">{{producto.price| currency:undefined:0}}</p>
+                                                <p style="margin: 0 !important;" ng-if="producto.discountPercent > 0">{{producto.price - ((producto.price / 100) * producto.discountPercent)| currency:undefined:0}}</p>
+                                                <div class="tag-descuentos" ng-if="producto.discountPercent > 0">
+                                                    <p style="margin: 0 !important; font-size: 12px">-{{producto.discountPercent}}%</p>
+                                                </div>
+                                            </td>
+                                            <td style="text-align: right; width: 115px;">
+                                                <p style="margin: 0 !important; {{producto.discountPercent > 0 ? 'text-decoration: line-through; color: #AAAAAA' : ''}}">{{producto.cantidad * producto.price| currency:undefined:0}}</p>
+                                                <p style="margin: 0 !important;" ng-if="producto.discountPercent > 0">{{producto.cantidad * producto.price - ((producto.cantidad * producto.price / 100) * producto.discountPercent)| currency:undefined:0}}</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!--<div id="product-table-footer">
+                                <table class="table table-bordered table-hover">
+                                    <tr>
+                                        <td style="text-align: right;"> <b>Total</b> </td>
+                                        <td style="text-align: right; width: 115px;"> <b>{{calcularTotalCompra() | currency:undefined:0}}</b> </td>
+                                    </tr>
+                                </table>
+                            </div>-->
+                    </div>
+                </div>
+            </div>
+            <div class="col-xs-4 panel-pago">
+                <div class="row">
+                    <form ng-submit="consultarCliente()">
+                        <div class="col-xs-12">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td>
+                                        <input autocomplete="off" type="text" placeholder="cédula/nit" class="form-control input-lg noround" ng-model="nitCliente" /> </td>
+                                    <td style="width: 95px; text-align: right;">
+                                        <button type="submit" class="btn btn-lg btn-danger noround">Buscar</button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-xs-12">
+                            <h4>{{cliente.cardName}}</h4>
+                        </div>
+                    </form>
+                </div>
+                <hr style="margin: 0;" />
+                <form ng-submit="agregarPago()">
+                    <div class="row">
+                        <div class="col-xs-12">
+                            <h2>Agregar pago</h2>
+                        </div>
+                        <div class="col-xs-12">
+                            <div class="row">
+                                <div class="col-xs-12 col-sm-6" ng-repeat="medioPago in mediosPago">
+                                    <div class="medio-pago" ng-click="setMedio(medioPago.codigo)" ng-class="{'medio-pago-active' : medioPago.codigo === medioSeleccionado}" ng-show="medioPago.activo"> {{medioPago.nombre}}
+                                        <br/> <span ng-hide="medioPago.valor === 0">{{medioPago.valor| currency:undefined:0}}</span> </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-xs-12">
+                            <table style="width: 100%;">
+                                <tr>
+                                    <td style="font-size: 30px;">Total </td>
+                                    <td style="text-align: right; font-size: 30px;">{{totalCompra| currency:undefined:0}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 30px;">Pagado</td>
+                                    <td style="text-align: right; font-size: 30px;">{{totalPagado| currency:undefined:0}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 30px;">Pendiente</td>
+                                    <td style="text-align: right; font-size: 30px;">{{pagoPendiente| currency:undefined:0}}</td>
+                                </tr>
+                                <tr>
+                                    <td style="font-size: 30px;">Cambio</td>
+                                    <td style="text-align: right; font-size: 30px;">{{cambio| currency:undefined:0}}</td>
+                                </tr>
+                                <!--
+                                    <tr style="border-top: 1px solid #888;">
+                                        <td style="font-size: 30px;">Base</td>
+                                        <td style="text-align: right; font-size: 30px;">{{totalBase| currency:undefined:0}}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="font-size: 30px;">IVA</td>
+                                        <td style="text-align: right; font-size: 30px;">{{totalIVA| currency:undefined:0}}</td>
+                                    </tr>
+                                    -->
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row" style="padding-top: 5px;" ng-show="medioSeleccionado === 1">
+                        <div class="col-xs-12">
+                            <input autocomplete="off" type="number" class="form-control input-lg noround" placeholder="Valor" ng-model="valorEfectivo" ng-keyup="guardarValorEfectivo()" /> </div>
+                    </div>
+                    <div class="row" style="padding-top: 5px;" ng-show="medioSeleccionado === 3">
+                        <div class="col-xs-12">
+                            <div class="input-group">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default btn-lg noround" type="button" ng-click="cargarPagoPendiente()" ng-disabled="pagoPendiente === 0">
+                                        <span class="glyphicon glyphicon-magnet"></span>
+                                </button>
+                                </span>
+                                <input id="txtValor" type="number" ng-model="npValor" ng-keyup="calcularPorcentajeImpuestos()" placeholder="Valor" class="form-control input-lg noround" autocomplete="off" ng-disabled="pagoPendiente === 0" />
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default btn-lg noround" type="button" ng-click="enviarDatosDatafono()" 
+                                            ng-disabled="pagoPendiente === 0 || npValor === 0 || npValor === null">
+                                        <span class="glyphicon glyphicon-transfer"></span>
+                                </button>
+                                </span>
+                            </div>
+                        </div>
+                        <br/>
+                        <div class="col-xs-12 form-padding" ng-show="pagosTarjeta.length > 0">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th style="width: 100px;">Franquicia</th>
+                                        <th style="text-align: center; width: 70px;">Voucher</th>
+                                        <th style="text-align: center; width: 70px;">Dígitos</th>
+                                        <th style="text-align: right; width: 100px;">Total</th>
+                                        <th style="text-align: right; width: 100px;">Base</th>
+                                        <th style="text-align: right; width: 100px;">IVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="pagoTarjeta in pagosTarjeta" class="fila-pago-tarjeta" ng-click="seleccionarFilaAnularPagoTarjeta($index)">
+                                        <td>{{$index + 1}}</td>
+                                        <td style="width: 100px;">{{pagoTarjeta.franquicia}}</td>
+                                        <td style="text-align: center">{{pagoTarjeta.voucher}}</td>
+                                        <td style="text-align: center">{{pagoTarjeta.tarjeta}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.valor| currency:undefined:0}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.base| currency:undefined:0}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.iva| currency:undefined:0}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <!--
+                    <div class="row" style="padding-top: 5px;" ng-show="medioSeleccionado === 3">
+                        <div class="col-xs-12 form-padding">
+                            <button class="btn btn-default btn-lg noround" type="button" style="width: 100%; font-size: 26px;" ng-click="mostrarPanelTarjetas()">Agregar</button>
+                        </div>
+                        <div class="col-xs-12 form-padding" ng-show="pagosTarjeta.length > 0">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th style="width: 100px;">Franquicia</th>
+                                        <th style="text-align: center; width: 70px;">Voucher</th>
+                                        <th style="text-align: center; width: 70px;">Dígitos</th>
+                                        <th style="text-align: right; width: 100px;">Total</th>
+                                        <th style="text-align: right; width: 100px;">Base</th>
+                                        <th style="text-align: right; width: 100px;">IVA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr ng-repeat="pagoTarjeta in pagosTarjeta" class="fila-pago-tarjeta" ng-click="seleccionarFilaPagoTarjeta($index)">
+                                        <td>{{$index + 1}}</td>
+                                        <td style="width: 100px;">{{pagoTarjeta.franquicia}}</td>
+                                        <td style="text-align: center">{{pagoTarjeta.voucher}}</td>
+                                        <td style="text-align: center">{{pagoTarjeta.tarjeta}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.valor| currency:undefined:0}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.base| currency:undefined:0}}</td>
+                                        <td style="text-align: right; /*width: 100px;*/">{{pagoTarjeta.iva| currency:undefined:0}}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    -->
+                    <div class="row" style="padding-top: 5px;" ng-show="medioSeleccionado === 5">
+                        <div class="col-xs-12 form-padding" ng-show="cliente === null">
+                            <div class="alert alert-danger" role="alert">
+                                <p>Debe ingresar un cliente antes de consultar el saldo a favor</p>
+                            </div>
+                        </div>
+                        <div class="col-xs-12 form-padding" ng-show="cliente !== null">
+                            <button class="btn btn-default btn-lg noround" type="button" style="width: 100%; font-size: 26px;" ng-click="consultarSaldoCliente()">Consultar saldo</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <script src="bower_components/jquery/dist/jquery.min.js"></script>
+        <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="bower_components/angular/angular.min.js"></script>
+        <script type="text/javascript" src="app.js"></script>
+        <script type="text/javascript" src="js/jquery.nanoscroller.min.js"></script>
+    </div>
+    <div class="container-fluid" ng-show="!cajaAbierta && sesionValida">
+        <div class="row">
+            <div class="col-xs-12"> <span style="font-size: 60px">¡Hola {{nombreEmpleado}}!</span>
+                <p style="font-size: 25px;">La caja se encuentra cerrada. Ejecuta la operación de apertura de caja para comenzar a realizar ventas.</p>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid" ng-show="!sesionValida && estadoValidacion === 1">
+        <div class="row">
+            <div class="col-xs-12"> <span style="font-size: 55px;color: #999;">Acceso no permitido</span> <span style="font-size: 55px;color: #d9534f;padding-left: 15px;">:(</span>
+                <p style="font-size: 35px">No se pudo acceder a la facturación POS</p>
+                <p style="font-size: 25px">{{mensajeErrorSesion}}</p>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid" ng-show="estadoValidacion === 0">
+        <div class="row">
+            <div class="col-xs-12" style="margin-left: auto; margin-right: auto; text-align: center;"> <img src="img/30.gif" /> </div>
+        </div>
+    </div>
+    <nav class="navbar navbar-fixed-bottom" ng-show="estadoValidacion === 1 && sesionValida">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="btn-group btn-group-lg dropup" ng-show="cajaAbierta">
+                        <button type="button" class="btn btn-default dropdown-toggle noround" data-toggle="dropdown" aria-haspopup="true"> Venta <span class="caret"></span> </button>
+                        <ul class="dropdown-menu dropdown-menu-scroll noround">
+                            <li ng-show="productos.length === 0 && !cliente" ng-click="listarVentasHoy()"><a href="#">Anular</a></li>
+                            <li ng-show="productos.length === 0 && !cliente" ng-click="mostrarPanelDevoluciones()"><a href="#">Devoluciones</a></li>
+                            <li ng-show="productos.length === 0 && !cliente" ng-click="listarVentasSuspendidas()"><a href="#">Reanudar</a></li>
+                            <li ng-show="productos.length > 0 && cliente" ng-click="suspenderVenta()"><a href="#">Suspender</a></li>
+                            <li ng-show="productos.length > 0 || cliente" ng-click="mostrarConfirmacionCancelar()"><a href="#">Cancelar</a></li>
+                        </ul>
+                    </div>
+                    <div class="btn-group btn-group-lg dropup">
+                        <button type="button" class="btn btn-default dropdown-toggle noround" data-toggle="dropdown" aria-haspopup="true"> Caja <span class="caret"></span> </button>
+                        <ul class="dropdown-menu dropdown-menu-scroll noround">
+                            <li ng-hide="cajaAbierta" ng-click="mostrarPanelAutorizacion('ABRIR', 'CAJON_MONEDERO', null, abrirCaja)"><a href="#">Abrir</a></li>
+                            <li ng-show="cajaAbierta" ng-click="mostrarPanelAutorizacion('ABRIR', 'CAJON_MONEDERO', null, abrirCajonMonedero)"><a href="#">Abrir cajón</a></li>
+                            <li ng-show="cajaAbierta" ng-click="mostrarPanelAutorizacion('ABRIR', 'CAJON_MONEDERO', null, cerrarCaja)"><a href="#">Cerrar</a></li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-lg btn-danger noround pull-right" type="button" ng-show="mostrarBotonPago()" ng-click="validarTipoVenta()">Efectuar pago</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+</body>
+
+</html>

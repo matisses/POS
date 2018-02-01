@@ -1,0 +1,444 @@
+[ng\:cloak],
+[ng-cloak],
+[data-ng-cloak],
+[x-ng-cloak],
+.ng-cloak,
+.x-ng-cloak {
+    display: none !important;
+}
+
+.nano {
+    height: 550px;
+    /*min-height: 100px;*/
+    width: 100%;
+}
+
+.nano .nano-content {
+    padding: 0px;
+}
+
+.nano .nano-pane {
+    background: #eee;
+    width: 8px;
+}
+
+.nano .nano-slider {
+    background: #ddd;
+}
+
+.panel-pago {
+    background-color: #f8f8f8;
+    padding-top: 15px;
+    margin-top: -15px;
+    height: 100vh;
+}
+
+.table-bordered-dark {
+    border: 1px solid #555;
+}
+
+.table.table-bordered-dark>thead>tr>th {
+    border-bottom: 2px solid #555;
+}
+
+.table.table-bordered-dark>tbody>tr>td,
+.table.table-bordered-dark>tbody>tr>th,
+.table.table-bordered-dark>tfoot>tr>td,
+.table.table-bordered-dark>tfoot>tr>th,
+.table.table-bordered-dark>thead>tr>td,
+.table.table-bordered-dark>thead>tr>th {
+    border-top: 1px solid #555;
+}
+
+.noround {
+    border-radius: 0px !important;
+}
+
+.medio-pago {
+    background-color: #d8d8d8;
+    cursor: pointer;
+    font-size: 25px;
+    height: 80px;
+    line-height: normal;
+    margin-bottom: 3px;
+    padding: 5px;
+    text-align: center;
+}
+
+.medio-pago:hover,
+.medio-pago-active {
+    background-color: #d9534f;
+    color: #ffffff;
+}
+
+.form-padding {
+    padding-bottom: 5px;
+}
+
+.dropdown-menu-scroll {
+    font-size: 20px;
+    max-height: 250px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    width: 100%;
+}
+
+.fila-pago-tarjeta:hover {
+    background-color: #cccccc;
+    color: #333;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.fila-pago-tarjeta-activa {
+    background-color: #cccccc;
+    font-weight: bold;
+    color: #333;
+}
+
+.producto-carrito {
+    border: 1px solid #aaaaaa;
+    height: 145px;
+    margin-bottom: 5px;
+    padding-top: 10px;
+    padding-bottom: 5px;
+}
+
+.producto-carrito:hover {
+    border: 1px solid #d9534f;
+    cursor: pointer;
+}
+
+.producto-carrito td {
+    vertical-align: top;
+}
+
+.boton-modo-carrito {
+    font-size: 30px;
+    padding-bottom: 7px;
+    padding-left: 7px;
+    padding-right: 4px;
+    padding-top: 4px;
+    border: none;
+    background-color: white;
+}
+
+.boton-tarjeta-regalo {
+    font-size: 30px;
+    padding-bottom: 7px;
+    padding-left: 7px;
+    padding-right: 4px;
+    padding-top: 4px;
+    color: #d9534f;
+    background-color: white;
+    border: none;
+}
+
+.boton-tarjeta-regalo[disabled] {
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.tabla-ventas tbody tr {}
+
+.tabla-ventas tbody tr:hover {
+    background-color: #cccccc;
+    cursor: pointer;
+}
+
+.factura-anular-seleccionada {
+    background-color: #f5f5f5;
+    font-weight: bold;
+}
+
+.denominacion {
+    border: 1px solid #aaaaaa;
+    height: 150px;
+    margin-bottom: 5px;
+    padding: 5px;
+}
+
+.denominacion-selected {
+    background-color: #d3d3d3;
+    border: 1px solid #d9534f;
+}
+
+.denominacion:hover {
+    border: 1px solid #d9534f;
+    cursor: pointer;
+}
+
+.img-denominacion {
+    max-height: 75px;
+    max-width: 152px;
+}
+
+.btn-calc {
+    font-size: 50px;
+    margin-top: 5px;
+    width: 100%;
+}
+
+.input-unidades::-webkit-input-placeholder {
+    font-size: 18px;
+    text-align: left;
+}
+
+.input-unidades:-moz-placeholder {
+    /* Firefox 18- */
+    font-size: 18px;
+    text-align: left;
+}
+
+.input-unidades::-moz-placeholder {
+    /* Firefox 19+ */
+    font-size: 18px;
+    text-align: left;
+}
+
+.input-unidades:-ms-input-placeholder {
+    font-size: 18px;
+    text-align: left;
+}
+
+.confirmacion-venta {
+    font-size: 18px;
+}
+
+.btn-empaque {
+    border-right: 1px solid #aaa;
+    border-bottom: 1px solid #aaa;
+    border-left: 1px solid #fff;
+    border-top: 1px solid #fff;
+    font-size: 10px;
+    height: 140px;
+    text-transform: lowercase;
+}
+
+.btn-empaque:hover {
+    border-left: 1px solid #aaa;
+    border-top: 1px solid #aaa;
+    cursor: pointer;
+}
+
+.eliminar-empaque {
+    font-size: 25px;
+    padding: 5px;
+}
+
+.img-empaque {
+    max-height: 98px;
+}
+
+.cantidad-empaque {
+    width: 80%;
+    text-align: left;
+    font-size: 20px;
+    padding-left: 10px;
+}
+
+.nav-tabs>li>a {
+    color: #555;
+}
+
+.modal-espera {
+    background-color: transparent;
+}
+
+.total-empaque {
+    padding-bottom: 15px;
+}
+
+.credit-card-logo {
+    width: 80px;
+}
+
+.credit-card-selected {
+    background-color: #eee;
+    filter: none !important;
+    -webkit-filter: grayscale(0) !important;
+}
+
+.credit-card {
+    margin-bottom: 5px;
+    height: 80px;
+    text-align: center;
+    filter: gray;
+    /* IE6-9 */
+    filter: grayscale(1);
+    /* Microsoft Edge and Firefox 35+ */
+    -webkit-filter: grayscale(1);
+}
+
+.credit-card:hover {
+    background-color: #eee;
+    cursor: pointer;
+    filter: none;
+    -webkit-filter: grayscale(0);
+}
+
+.credit-card-disabled {
+    cursor: not-allowed !important;
+    filter: gray !important;
+    /* IE6-9 */
+    filter: grayscale(1) !important;
+    /* Microsoft Edge and Firefox 35+ */
+    -webkit-filter: grayscale(1) !important;
+}
+
+.credit-card-disabled:hover {}
+
+.asesor-venta {
+    filter: gray;
+    /* IE6-9 */
+    filter: grayscale(1);
+    /* Microsoft Edge and Firefox 35+ */
+    height: 150px;
+    margin-bottom: 25px;
+    padding-top: 5px;
+    -webkit-filter: grayscale(1);
+}
+
+
+/*
+.asesor-venta:hover {
+    cursor: pointer;
+    filter: none;
+    -webkit-filter: grayscale(0);
+}
+*/
+
+.asesor-venta img {
+    height: 130px;
+}
+
+.asesor-venta-selected {
+    background-color: #fafafa;
+    filter: none;
+    -webkit-filter: grayscale(0);
+}
+
+.ubicacion-producto {
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+    margin-bottom: 5px;
+    margin-top: 10px;
+    border: 1px solid #cacaca;
+}
+
+.ubicacion-producto .tipo-almacen {
+    font-size: 35px;
+}
+
+.ubicacion-producto .tipo-almacen::selection {
+    background: transparent;
+}
+
+.ubicacion-producto td {
+    text-align: center;
+}
+
+.ubicacion-producto .disponible {
+    font-size: 15px;
+}
+
+.ubicacion-producto .disponible::selection {
+    background: transparent;
+}
+
+.ubicacion-producto .seleccionado {
+    font-size: 35px;
+}
+
+.ubicacion-producto .seleccionado::selection {
+    background: transparent;
+}
+
+.ubicacion-producto .agregar {
+    font-size: 15px;
+    background-color: #fafafa;
+    padding-left: 18px;
+    padding-right: 17px;
+    padding-bottom: 18px;
+    padding-top: 18px;
+}
+
+.ubicacion-producto .agregar:hover {
+    cursor: pointer;
+    background-color: #cacaca;
+}
+
+.ubicacion-producto .quitar {
+    font-size: 15px;
+    background-color: #fafafa;
+    padding-left: 18px;
+    padding-right: 17px;
+    padding-bottom: 18px;
+    padding-top: 18px;
+    margin-top: 1px;
+}
+
+.ubicacion-producto .quitar:hover {
+    cursor: pointer;
+    background-color: #cacaca;
+}
+
+.material-empaque,
+.empleado-ventas {
+    margin-top: 10px;
+}
+
+#ubicaciones {
+    font-family: "Trebuchet MS", Helvetica, sans-serif;
+}
+
+#ubicaciones .referencia {
+    font-size: 24px;
+}
+
+#ubicaciones .cant-necesaria {
+    font-size: 16px;
+}
+
+#ubicaciones .cant-necesaria-valor {
+    font-size: 25px;
+}
+
+#ubicaciones .ref-proveedor {
+    font-size: 16px;
+}
+
+#ubicaciones .cant-elegida {
+    font-size: 16px;
+}
+
+#ubicaciones .cant-elegida-valor {
+    font-size: 25px;
+}
+
+#ubicaciones .nombre-producto {
+    font-size: 15px;
+}
+
+.mensaje-regalo {
+    margin-bottom: 0px;
+}
+
+.tag-descuentos {
+    position: relative;
+    display: inline-block;
+    background: #990000;
+    color: #FFF;
+    padding: 0 5px;
+    border-radius: 4px;
+}
+
+.tag-descuentos::before {
+    position: absolute;
+    display: inline-block;
+    border-width: 7px 8px;
+    border-style: solid;
+    content: '';
+    right: 11px;
+    top: -12px;
+    border-color: transparent transparent #990000 transparent;
+}
